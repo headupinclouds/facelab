@@ -16,7 +16,8 @@ cv::Mat complex(const cv::Mat &image)
 {
     cv::Mat output;
     cv::Mat zeros = cv::Mat::zeros(image.size(), image.type());
-    cv::merge(std::vector<cv::Mat>{image, zeros}, output);
+    std::vector<cv::Mat> args{image, zeros}    
+    cv::merge(args, output);
     return output;
 }
 

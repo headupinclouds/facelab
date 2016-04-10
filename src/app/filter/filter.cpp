@@ -1,5 +1,7 @@
 #include "facelab/homomorphic.hpp"
 
+#include "local_laplacian.h"
+
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -25,6 +27,12 @@ const char *keys =
 {
     "{ input     |       | input filename                            }"
     "{ output    |       | output filename                           }"
+
+    // Local Laplacian Filtering:
+    "{ levels    |   3   | number of pyramid levels                  }"
+    "{ sigma     |  0.3  | threshold distinguishing details from edges. Smaller values limit the manipulation to smaller-amplitude variations }"
+    "{ alpha     |  2.0  | controls how details are modified: 0<a<1 amplifies detail, while a>1 attenuates it.     }"
+    "{ beta      |  1.0  | intensity range: beta > 1.0 performs expansion, while beta < 1.0 performs compression.  }"
 
     "{ threads   | false | use worker threads when possible          }"
     "{ verbose   | false | print verbose diagnostics                 }"
@@ -77,8 +85,7 @@ int main(int argc, char *argv[])
     cv::Mat output;
     
     if(1)
-    {
-        // smoothing
+    { // bilateral smoothing 
         cv::Mat smooth;
         bilateral(input, smooth, 10, 10, 2);
         
@@ -96,9 +103,36 @@ int main(int argc, char *argv[])
         // smoothing
         bilateral(hef, output, 10, 10, 2);
     }
+
+    { // local laplacian filter:
+        const double kSigmaR = parser.get<double>("sigma"); // 0.3
+        const double kAlpha = parser.get<double>("alpha");  // 2.0
+        const double kBeta = parser.get<double>("beta");    // 1.0
+        const int kLevels = parser.get<int>("levels");      // 3
+        
+        output.convertTo(output, CV_64F, 1 / 255.0);
+
+        std::cout << "Input image: " << sInput << " Size: " << input.cols << " x " << input.rows << " Channels: " << input.channels() << std::endl;
+
+        switch(input.channels())
+        {
+        case 1:
+            output = LocalLaplacianFilter<double>(output, kAlpha, kBeta, kSigmaR, kLevels);
+            break;
+        case 3:
+            output = LocalLaplacianFilter<cv::Vec3d>(output, kAlpha, kBeta, kSigmaR, kLevels);
+            break;
+        default:
+            std::cerr << "Input image must have 1 or 3 channels." << std::endl;
+            return 1;
+        }
+
+        output *= 255;
+        output.convertTo(output, CV_8UC3);
+    }
     
     if(1)
-    {
+    { // mean shift
         int spatialRad = 10, colorRad = 10, maxPyrLevel = 3;
         cv::Mat ms;
         cv::pyrMeanShiftFiltering(output, ms, spatialRad, colorRad, maxPyrLevel);

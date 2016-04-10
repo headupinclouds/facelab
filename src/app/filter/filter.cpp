@@ -83,13 +83,13 @@ int main(int argc, char *argv[])
         bilateral(input, smooth, 10, 10, 2);
         
         const int order = 4;
-        const float cutoff = 0.48;
-        const float boost= 4.0;
-        const float beta = 1.0 / boost;
-        const float alpha = 1.0 - beta;
+        const float cutoff = 0.48f;
+        const float boost= 4.0f;
+        const float beta = 1.0f / boost;
+        const float alpha = 1.0f - beta;
 
         cv::Mat hef;
-        homomorphic(smooth, hef, cutoff, order, alpha, beta, {0.1, 0.90}, {});
+        homomorphic(smooth, hef, cutoff, order, alpha, beta, {0.02f, 0.98f}, {});
         
         assert(hef.type() == CV_8UC3);
         

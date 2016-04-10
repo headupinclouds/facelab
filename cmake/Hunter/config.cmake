@@ -10,9 +10,20 @@ set(OPENCV_CMAKE_ARGS
   ENABLE_NEON=OFF
   BUILD_ANDROID_SERVICE=OFF
   BUILD_ANDROID_EXAMPLES=OFF
+
+  INSTALL_PYTHON_EXAMPLES=OFF
+  BUILD_WITH_STATIC_CRT=OFF # Fix https://github.com/ruslo/hunter/issues/177
+  
+  # Find packages in Hunter (instead of building from OpenCV sources)
   BUILD_ZLIB=OFF ## HUNTER
   BUILD_TIFF=OFF ## HUNTER
   BUILD_PNG=OFF  ## HUNTER
+  BUILD_JPEG=OFF
+
+  BUILD_opencv_java=OFF
+  BUILD_opencv_python2=OFF
+  BUILD_opencv_python3=OFF
+  
   ANDROID_EXAMPLES_WITH_LIBS=OFF    # "Build binaries of Android examples with native libraries"
 
   ### Custom ARGS ###

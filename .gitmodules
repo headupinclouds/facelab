@@ -1,3 +1,12 @@
 [submodule "src/3rdparty/local_laplacian_filters"]
 	path = src/3rdparty/local_laplacian_filters
 	url = git@github.com:headupinclouds/local_laplacian_filters.git
+[submodule "src/3rdparty/tapkee"]
+	path = src/3rdparty/tapkee
+	url = git@github.com:lisitsyn/tapkee.git
+[submodule "src/3rdparty/eos"]
+	path = src/3rdparty/eos
+	url = git@github.com:headupinclouds/eos.git
+[submodule "src/3rdparty/dest"]
+	path = src/3rdparty/dest
+	url = git@github.com:cheind/dest.git

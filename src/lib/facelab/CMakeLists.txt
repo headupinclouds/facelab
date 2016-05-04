@@ -1,10 +1,33 @@
 add_library(facelab
+  FaceLandmarkMeshMapper.cpp
+  FaceLandmarkMeshMapper.h
+
+  Filter.h
+
+  # Diffusion routines from opencv AKAZE
+  nldiffusion_functions.cpp
+  nldiffusion_functions.h
+  fed.h
+  fed.cpp
+
+  DiffusionFilter.h
+  DiffusionFilter.cpp
+
+  # homomorphic filter
   homomorphic.cpp
   homomorphic.hpp
   shift.hpp
   )
 
-target_link_libraries(facelab ${OpenCV_LIBS})
+set_property(TARGET facelab PROPERTY FOLDER "libs")
+
+message("OpenCV_LIBS ${OpenCV_LIBS}")
+message("===========================")
+message("===========================")
+message("===========================")
+message("===========================")
+
+target_link_libraries(facelab ${OpenCV_LIBS} Eigen::eigen cereal::cereal Boost::boost)
 
 ### Install ###
 set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")

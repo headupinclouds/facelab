@@ -2,6 +2,9 @@
 #include "facelab/shift.hpp"
 #include <opencv2/core.hpp>
 
+#include <opencv2/highgui.hpp>
+#include <iostream>
+
 void fftshift(const cv::Mat& input, cv::Mat& output)
 {
     shift(input, output, cv::Point2f(input.cols / 2, input.rows / 2), cv::BORDER_WRAP);
@@ -21,11 +24,10 @@ cv::Mat complex(const cv::Mat &image)
     return output;
 }
 
-cv::Vec2f findLimits(const cv::Mat &image, const cv::Mat &mask, const cv::Vec2f &range)
+cv::Vec2f findLimits(const cv::Mat &image, const cv::Mat &mask, const cv::Vec2f &range, int bins = 10000)
 {
     cv::Mat1f hist;
     
-    const int bins = 1000;
     cv::Vec2d vals;
     cv::minMaxLoc(image, &vals[0], &vals[1]);
     
@@ -39,7 +41,7 @@ cv::Vec2f findLimits(const cv::Mat &image, const cv::Mat &mask, const cv::Vec2f 
     float *h = hist.ptr<float>(0);
     
     int i = 0;
-    for(; i < hist.cols; i++, h++)
+    for(; i < hist.total(); i++, h++)
     {
         tally += h[0];
         if((tally / total) > range[0])
@@ -49,7 +51,7 @@ cv::Vec2f findLimits(const cv::Mat &image, const cv::Mat &mask, const cv::Vec2f 
     }
     lower = vals[0] + (step * i);
     
-    for(; i < hist.cols; i++, h++)
+    for(; i < hist.total(); i++, h++)
     {
         tally += h[0];
         if((tally / total) > range[1])
@@ -57,7 +59,7 @@ cv::Vec2f findLimits(const cv::Mat &image, const cv::Mat &mask, const cv::Vec2f 
             break;
         }
     }
-    upper = vals[1] + (step * i);
+    upper = vals[0] + (step * i);
     
     return cv::Vec2f(lower, upper);
 }
@@ -86,14 +88,14 @@ void highboost(const cv::Mat1f &image, cv::Mat1f &output, float cutoff, int orde
     cv::Mat1f filter(size, 0.f);
     butterworth(filter, cutoff, order); // low pass filter
     ifftshift(alpha * (1.0 - filter) + beta, filter);
-
+    
     // 2) padd the image
     cv::Mat padded;
     cv::copyMakeBorder(image, padded, 0, size.height-image.rows, 0, size.width-image.cols, cv::BORDER_REFLECT);
    
     // 3) log transform
     cv::Mat scratch;
-    cv::log((padded + 0.01f), scratch);
+    cv::log((padded + 0.1f), scratch);
 
     // 5) FFT
     cv::Mat response, transform;
@@ -106,7 +108,9 @@ void highboost(const cv::Mat1f &image, cv::Mat1f &output, float cutoff, int orde
     cv::idft(response, scratch, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
 
     // 8) exp
-    cv::exp(scratch, scratch);
+    cv::Mat result;
+    cv::exp(scratch, result);
+    cv::swap(scratch, result);
     
     // 9) range clip
     cv::Vec2f thresholds = findLimits(scratch, mask, range);
@@ -120,18 +124,30 @@ void highboost(const cv::Mat1f &image, cv::Mat1f &output, float cutoff, int orde
 
 void homomorphic(const cv::Mat &image, cv::Mat &output, float cutoff, int n, float alpha, float beta, const cv::Vec2f &range, const cv::Mat &mask)
 {
+    static const float gain = 255.0f;
+    
     cv::Mat hsi;
     cv::cvtColor(image, hsi, cv::COLOR_BGR2HSV_FULL);
     
     cv::Mat3f hsi32f(image.size());
-    hsi.convertTo(hsi32f, CV_32F, 1.0/255.0);
+    hsi.convertTo(hsi32f, CV_32F, 1.0f/gain);
     
-    cv::Mat1f channels[3], reflectance;
+    cv::Mat channels[3];
+    cv::Mat1f reflectance;
     cv::split(hsi32f, channels);
-    highboost(channels[2], reflectance, cutoff, n, alpha, beta, range, mask);
+    
+    cv::Mat1f value(channels[2]);
+    highboost(value, reflectance, cutoff, n, alpha, beta, range, mask);
 
-    cv::swap(channels[2], reflectance);
-    cv::merge(channels, 3, hsi32f);
-    hsi32f.convertTo(hsi, CV_8U, 255.0);
+    cv::Mat r1;
+    cv::normalize(reflectance, r1, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    
+    //cv::equalizeHist(r1, r1);
+    r1.convertTo(channels[2], CV_8UC1);
+    for(int i = 0; i < 2; i++)
+    {
+        channels[i].convertTo(channels[i], CV_8UC1, gain);
+    }
+    cv::merge(channels, 3, hsi);
     cv::cvtColor(hsi, output, cv::COLOR_HSV2BGR_FULL);
 }

@@ -6,11 +6,11 @@ cmake_minimum_required(VERSION 3.0)
 ### Hunter snapshot that will be used ###
 include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.14.3.tar.gz"
-    SHA1 "e05bc95f6d62b7c55188044e39e8be5afb1e8af4"
-    LOCAL
+  URL "https://github.com/ruslo/hunter/archive/v0.14.12.tar.gz"
+  SHA1 "2d444140db0d53393b5490604006bb4f4896a444"
+  LOCAL
 )
-  
+
 project(facelab VERSION 0.1.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
@@ -31,12 +31,36 @@ if(is_xcode)
   set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE NO)
 endif()
 
+
+## #################################################################
+## Dependencies - OpenCV
+## #################################################################
+#hunter_add_package(Boost)
+#find_package(Boost CONFIG REQUIRED)
+
+hunter_add_package(Boost COMPONENTS system filesystem)
+find_package(Boost CONFIG REQUIRED system filesystem)
+
 ## #################################################################
 ## Dependencies - OpenCV
 ## #################################################################
 
 hunter_add_package(OpenCV)
 find_package(OpenCV REQUIRED)
+## #################################################################
+## Dependencies - Eigen
+## #################################################################
+
+hunter_add_package(Eigen)
+find_package(Eigen REQUIRED) 
+message("EIGEN3_INCLUDE_DIR = ${EIGEN3_INCLUDE_DIR}")
+
+## #################################################################
+## Dependencies - cereal
+## #################################################################
+
+hunter_add_package(cereal)
+find_package(cereal REQUIRED) 
 
 ## #################################################################
 ## Project

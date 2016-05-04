@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<OPLandIPLparvo>
+  <colorMode>1</colorMode>
+  <normaliseOutput>1</normaliseOutput>
+  <photoreceptorsLocalAdaptationSensitivity>0.99</photoreceptorsLocalAdaptationSensitivity>
+  <photoreceptorsTemporalConstant>1.0</photoreceptorsTemporalConstant>
+  <photoreceptorsSpatialConstant>1.0</photoreceptorsSpatialConstant>
+  <horizontalCellsGain>0.0</horizontalCellsGain>
+  <hcellsTemporalConstant>0.500</hcellsTemporalConstant>
+  <hcellsSpatialConstant>7.0</hcellsSpatialConstant>
+  <ganglionCellsSensitivity>0.75</ganglionCellsSensitivity></OPLandIPLparvo>
+<IPLmagno>
+  <normaliseOutput>1</normaliseOutput>
+  <parasolCells_beta>0.</parasolCells_beta>
+  <parasolCells_tau>0.</parasolCells_tau>
+  <parasolCells_k>7.</parasolCells_k>
+  <amacrinCellsTemporalCutFrequency>2.</amacrinCellsTemporalCutFrequency>
+  <V0CompressionParameter>9.4999998807907104e-01</V0CompressionParameter>
+  <localAdaptintegration_tau>0.</localAdaptintegration_tau>
+  <localAdaptintegration_k>7.</localAdaptintegration_k></IPLmagno>
+</opencv_storage>
+
+<!-- colorMode – specifies if (true) color is processed of not (false) to then processing gray level image
+     normaliseOutput – specifies if (true) output is rescaled between 0 and 255 of not (false) 
+
+photoreceptorsLocalAdaptationSensitivity – the photoreceptors sensitivity renage is 0-1
+ (more log compression effect when value increases)
+
+photoreceptorsTemporalConstant – the time constant of the first order low pass filter of the photoreceptors,
+  use it to cut high temporal frequencies (noise or fast motion), unit is frames, typical value is 1 frame
+
+photoreceptorsSpatialConstant – the spatial constant of the first order low pass filter of the photoreceptors,
+  use it to cut high spatial frequencies (noise or thick contours), unit is pixels, typical value is 1 pixel
+
+horizontalCellsGain – gain of the horizontal cells network, if 0, then the mean value of the output is zero,
+  if the parameter is near 1, then, the luminance is not filtered and is still reachable at the output, typicall value is 0
+
+HcellsTemporalConstant – the time constant of the first order low pass filter of the horizontal cells,
+  use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors
+
+HcellsSpatialConstant – the spatial constant of the first order low pass filter of the horizontal cells,
+ use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel,
+ this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level
+ (Inner Plexiform Layer parvocellular channel model)
+
+ganglionCellsSensitivity – the compression strengh of the ganglion cells local adaptation output,
+  set a value between 0.6 and 1 for best results, a high value increases more the low value sensitivity...
+  and the output saturates faster, recommended value: 0.7  -->

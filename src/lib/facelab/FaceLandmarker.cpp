@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #include "FaceLandmarker.h"
 
 #include <iostream>
@@ -111,7 +114,7 @@ std::vector<cv::Point2f>& FaceLandmarker::operator()(const cv::Mat1b &gray, cons
     if(!m_detector.empty())
     {
         std::vector<cv::Rect> faces;
-        m_detector.detectMultiScale(gray, faces);
+        m_detector.detectMultiScale(gray, faces); // TODO: set reasonable upper lower sizes
         crop = faces.front();
     }
     m_roi = crop;

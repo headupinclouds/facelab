@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #ifndef FACE_LANDMARKER_H
 #define FACE_LANDMARKER_H 1
 

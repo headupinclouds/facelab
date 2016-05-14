@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #include "facelab/homomorphic.hpp"
 #include "facelab/shift.hpp"
 #include <opencv2/core.hpp>
@@ -78,6 +81,8 @@ cv::Mat1f &butterworth(cv::Mat1f &filter, float cutoff, int n)
     }
     return filter;
 }
+
+// See: http://www.peterkovesi.com/matlabfns/FrequencyFilt/homomorphic.m
 
 void highboost(const cv::Mat1f &image, cv::Mat1f &output, float cutoff, int order, float alpha, float beta, const cv::Vec2f &range, const cv::Mat1b &mask)
 {

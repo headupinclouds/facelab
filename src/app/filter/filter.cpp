@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::string sOutput = parser.get<std::string>("output"); std::cout << sOutput << std::endl;
+    std::string sOutput = parser.get<std::string>("output"); 
     if(sOutput.empty())
     {
         std::cerr << "Must specify output filename" << std::endl;
@@ -378,6 +378,8 @@ int main(int argc, char *argv[])
         std::cerr << "Unable to read input file " << sInput << std::endl;
         return 1;
     }
+
+    bool verbose =  parser.get<bool>("verbose");
     
     std::vector<std::pair<std::string,cv::Mat>> drawings;
     
@@ -480,12 +482,13 @@ int main(int argc, char *argv[])
         drawings.emplace_back("comp", even);
     }
     
-    if(!sMapping.empty() && !sModel.empty() && landmarks.size())
+    if(!sMapping.empty() && !sModel.empty() && landmarks.size() && verbose)
     {
         cv::Mat iso = drawIsoMesh(mapper, landmarks, input);
         cv::imshow("iso", iso);
     }
 
+    // Dump the output 
     cv::Mat canvas;
     std::vector<cv::Mat> images;
     for(auto &i : drawings)
@@ -493,10 +496,7 @@ int main(int argc, char *argv[])
         images.push_back(i.second);
     }
     cv::hconcat(images, canvas);
-    cv::imshow("input_homomorphic_symmetry", canvas);
-    cv::imwrite("/tmp/cartoon.jpg", canvas);
-    cv::waitKey(0);
-    exit(1);
+    cv::imwrite(sOutput, canvas);
  
     return 0;
 }

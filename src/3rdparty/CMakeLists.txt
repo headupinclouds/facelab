@@ -10,6 +10,9 @@ set_property(TARGET llf PROPERTY FOLDER "libs/3rdparty/llf")
 set_property(TARGET locallaplacian PROPERTY FOLDER "apps/3rdparty")
 
 ### DEST
+set(DEST_WITH_OPENCV OFF CACHE BOOL "Build DEST with OpenCV support" FORCE)
+set(DEST_WITH_OPENMP OFF CACHE BOOL "Build DEST with OpenMP support" FORCE)
+set(DEST_VERBOSE OFF CACHE BOOL "Build DEST in verbose mode" FORCE)
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(dummy)
 set(SKIP_INSTALL ON CACHE BOOL "Avoid installation of submodule libraries" )

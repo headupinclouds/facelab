@@ -424,6 +424,7 @@ int main(int argc, char *argv[])
     if(!sRegressor.empty())
     {
         landmarker = std::make_shared<FaceLandmarker>(sRegressor, sDetector);
+        landmarker->canvas = input.clone();
         if(!sTriangles.empty())
         { // optional
             landmarker->readTriangulation(sTriangles);
@@ -476,10 +477,10 @@ int main(int argc, char *argv[])
         cv::reduce( mask.reshape(1, mask.total()), mask, 1, cv::REDUCE_MAX);
         mask = mask.reshape(1, input.rows);
         cv::Mat head = landmarker->segmentHead(even, mask);
-        even.setTo(0, ~head);
+        smooth.setTo(0, ~head);
 
-        symmetric.copyTo(even, mask);
-        drawings.emplace_back("comp", even);
+        symmetric.copyTo(smooth, mask);
+        drawings.emplace_back("comp", smooth);
     }
     
     if(!sMapping.empty() && !sModel.empty() && landmarks.size() && verbose)

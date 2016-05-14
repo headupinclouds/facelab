@@ -27,7 +27,6 @@ list(APPEND OPENCV_CMAKE_ARGS
   BUILD_opencv_world=ON 
   BUILD_EIGEN=OFF
   CMAKE_CXX_FLAGS=-Wno-c++11-narrowing
-  OPENCV_WITH_EXTRA_MODULES=YES #include "contrib" modules
 )
 
 hunter_config(OpenCV VERSION ${HUNTER_OpenCV_VERSION} CMAKE_ARGS "${OPENCV_CMAKE_ARGS}")

@@ -9,13 +9,14 @@
 
 #include "local_laplacian.h"
 
-#include <opencv2/bioinspired/bioinspired.hpp>
-
 #include <iostream>
 #include <sstream>
 #include <numeric>
 
-#include <opencv2/features2d.hpp>
+#define USE_RETINA 0
+#if USE_RETINA
+#  include <opencv2/bioinspired/bioinspired.hpp>
+#  include <opencv2/features2d.hpp>
 
 // ################ retina ####################
 
@@ -78,6 +79,7 @@ public:
     const float m_reductionFactor=1.0f;
     const float m_samplingStrength=10.0f;
 };
+#endif // USE_RETINA
 
 // ############### homomorphic ###############
 
@@ -316,7 +318,10 @@ const char *keys =
     // Tracker file
     "{ regressor |       | face landmark regressor file              }"
     "{ detector  |       | face detector                             }"
+
+#if USE_RETINA    
     "{ retina    |       | retina parameters                         }"
+#endif
 
     "{ model     |       | model file                                }"
     "{ mapping   |       | mapping file                              }"
@@ -388,7 +393,8 @@ int main(int argc, char *argv[])
     int iter = 7;
     int medianKernel = 7;
     CartoonizeFilter cartoonizeFilter(sigmaSpace, sigmaColor, iter, medianKernel);
-    
+
+#if USE_RETINA
     // ############ RETINA ###############
     std::string sRetina = parser.get<std::string>("retina");
     if(sRetina.empty())
@@ -397,6 +403,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     RetinaFilter retinaFilter(sRetina);
+#endif
     
     int width = parser.get<int>("width");
     cv::resize(input, input, {width, input.rows * width/input.cols}, cv::INTER_CUBIC);

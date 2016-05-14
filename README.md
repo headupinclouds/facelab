@@ -26,7 +26,13 @@ export PATH="${POLLY_ROOT}/bin:${PATH}"
 build.py --toolchain libcxx --install --reconfig --verbose
 ```
 
+# Configure: Download 3rdparty resource files
+```
+./bin/configure.sh
+```
 
-
-
-
+# Test face filter:
+```
+./bin/cartoon.sh /my/path/to/some/face/image.jpg
+open /tmp/cartoon.jpg
+```

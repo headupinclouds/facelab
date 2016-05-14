@@ -3,4 +3,7 @@
 
 add_subdirectory(filter)
 add_subdirectory(pose)
-add_subdirectory(retina)
+
+if(USE_RETINA)
+  add_subdirectory(retina)
+endif(USE_RETINA)

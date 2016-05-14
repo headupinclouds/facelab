@@ -31,6 +31,10 @@ if(is_xcode)
   set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE NO)
 endif()
 
+option(USE_RETINA "Use retina module" OFF)
+if(USE_RETINA)
+  add_definitions(-DUSE_RETINA=0)
+endif(USE_RETINA)
 
 ## #################################################################
 ## Dependencies - OpenCV

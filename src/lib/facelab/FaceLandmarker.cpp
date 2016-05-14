@@ -168,7 +168,9 @@ void FaceLandmarker::delaunay(const cv::Size &size)
         cv::Point2f v = p27 - p30;
         cv::Point2f vn = cv::normalize(cv::Vec2f(v));
 
-        const float scale = 2.25;
+        const float scale = 1.0;
+
+        //cv::Mat drawing = canvas.clone();
         
         for(int i = 9; i < 13; i++)
         {
@@ -177,11 +179,15 @@ void FaceLandmarker::delaunay(const cv::Size &size)
             {
                 const cv::Point2f fh0 = m_landmarks[mirrorMap[i][j]];
                 const cv::Point2f v0 = cv::normalize(cv::Vec2f(fh0 - p30));
-                const float w0 = v0.dot(vn) * cv::norm(v) * scale;
+                const float w0 = (1.5 + std::abs(v0.dot(vn))) * cv::norm(v) * scale;
                 const int index0 = landmarks.size();
                 indices[j] = index0;
                 cv::Point2f l0 = clip(p30 + (v0 * w0), cv::Rect({0,0}, size));
                 landmarks.push_back(l0);
+
+                //cv::circle(drawing, fh0, 2, {255,255,0}, -1, 8);
+                //cv::circle(drawing, l0, 2, {0,255,0}, -1, 8);
+                //cv::imshow("c", drawing); cv::waitKey(0);
             }
             mirrorMap.push_back(indices);
         }
@@ -189,7 +195,7 @@ void FaceLandmarker::delaunay(const cv::Size &size)
         { // Add the center ray:
             cv::Point2f c = (m_landmarks[mirrorMap[11][0]] + m_landmarks[mirrorMap[11][1]]) * 0.5f;
             const cv::Point2f v0 = cv::normalize(cv::Vec2f(c - p30));
-            const float w0 = v0.dot(vn) * cv::norm(v) * scale;
+            const float w0 = (1.5 + std::abs(v0.dot(vn))) * cv::norm(v) * scale;
             cv::Point2f l = clip(p30 + (v0 * w0), cv::Rect({0,0}, size));
             
             const int index = landmarks.size();
@@ -345,6 +351,11 @@ void FaceLandmarker::balance(const cv::Mat &image, cv::Mat &symmetric)
         M[i1] = M[i0].inv();
     }
 
+    // cv::dilate(mask, mask, cv::Mat(), {-1,-1}, 3);
+    // cv::Mat canvas;
+    // cv::normalize(mask, canvas, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    // cv::imshow("zones", canvas); cv::waitKey(0);
+
     assert(m_triangles[0].size() == m_triangles[1].size());
     
     { // Mirror image and take mean:
@@ -381,8 +392,9 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
     face.size.width *= scale;
     face.size.height *= scale;
     cv::Rect box = face.boundingRect();
-    
-    int y = 0;
+
+    int y = 0;    
+#if 0
     for(auto &p : m_landmarks)
     {
         if(p.y > y)
@@ -390,12 +402,22 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
             y = p.y;
         }
     }
+#else
+    y = image.rows;
+#endif
     
     cv::Point2f tl = box.tl(), br = box.br();
     tl = face.center + (tl - face.center) * M_SQRT2;
     br = face.center + (br - face.center) * M_SQRT2;
+
+#define DO_HEAD_AND_SHOULDERS 0
+#if DO_HEAD_AND_SHOULDERS
+    br.y = image.rows;
+    box.height = (image.rows - box.y) + 1;
+#endif
+    
     cv::Rect roi(tl, br);
-    roi &= cv::Rect(0,0,image.cols, y);
+    roi &= cv::Rect(0,0,image.cols, image.rows);
     
     cv::Mat1b head;
     
@@ -405,14 +427,15 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
         cv::erode(faceMask, faceMaskSmall, {}, {-1,-1}, 8);
         
         cv::Mat1b labels(size, cv::GC_BGD);
-        cv::rectangle(labels, box & roi, cv::GC_PR_FGD, -1);
+
+        cv::rectangle(labels, box, cv::GC_PR_FGD, -1);
         labels.setTo(cv::GC_FGD, faceMaskSmall);
 
         cv::Mat fg, bg;
         cv::grabCut(image(roi), labels(roi), box, fg, bg, 10, cv::GC_EVAL);
         head = ((labels & 1) > 0);
         
-        if(1)
+        if(0)
         { // (((( Display ))))
             cv::Mat canvas = image.clone();
             cv::imshow("f", faceMask);
@@ -421,7 +444,7 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
             cv::ellipse(canvas, face, {0,255,0}, 1, 8);
             cv::rectangle(canvas, box, {255,255,255}, 1, 8);
             cv::imshow("head_face", canvas);
-            cv::imshow("head_labels", labels * (255/3)); //cv::waitKey(0);
+            cv::imshow("head_labels", labels * (255/3)); cv::waitKey(0);
         }
     }
     

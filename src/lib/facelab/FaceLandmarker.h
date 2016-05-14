@@ -49,6 +49,8 @@ public:
     int writeTriangulation(const std::string &filename) const;
     int readTriangulation(const std::string &filename);
 
+    cv::Mat canvas;
+    
 protected:
     
     void delaunay(const cv::Size &size);

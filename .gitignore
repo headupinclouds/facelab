@@ -31,3 +31,5 @@
 
 *.*~
 *~
+assets/haarcascade_frontalface_alt.xml
+assets/dest_tracker_VJ_ibug.bin

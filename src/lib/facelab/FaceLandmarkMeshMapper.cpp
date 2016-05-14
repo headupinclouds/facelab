@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #include "facelab/FaceLandmarkMeshMapper.h"
 
 #include "eos/render/utils.hpp"

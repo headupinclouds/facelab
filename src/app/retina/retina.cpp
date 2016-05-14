@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>

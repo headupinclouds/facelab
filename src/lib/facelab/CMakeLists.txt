@@ -1,7 +1,17 @@
+# Copyright (c) 2015, David Hirvonen
+# All rights reserved.
+
 add_library(facelab
+
+  # CPR face landmark interface
+  FaceLandmarker.cpp  
+  FaceLandmarker.h
+
+  # 3D mesh fitter
   FaceLandmarkMeshMapper.cpp
   FaceLandmarkMeshMapper.h
 
+  # Filtering API
   Filter.h
 
   # Diffusion routines from opencv AKAZE

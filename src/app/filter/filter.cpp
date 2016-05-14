@@ -1,10 +1,13 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #include "facelab/Filter.h"
 #include "facelab/homomorphic.hpp"
 #include "facelab/FaceLandmarkMeshMapper.h"
 #include "facelab/DiffusionFilter.h"
+#include "facelab/FaceLandmarker.h"
 
 #include "local_laplacian.h"
-#include "FaceLandmarker.h"
 
 #include <opencv2/bioinspired/bioinspired.hpp>
 
@@ -87,13 +90,13 @@ public:
     {
         const float kBeta = (1.0/kBoost);
         const float kAlpha = (1.0 - kBeta);
-        homomorphic(src, dst, kCutoff, kOrder, kAlpha, kBeta, {0.00f, 0.96f});
+        homomorphic(src, dst, kCutoff, kOrder, kAlpha, kBeta, {0.00f, 0.94f});
         return dst;
     }
     
     virtual const char * getFilterName() const { return "HomomorphicFilter"; }
 
-    int kOrder = 4;
+    int kOrder = 2;
     float kBoost = 4.0;
     float kCutoff = 0.49;
 };
@@ -309,7 +312,7 @@ const char *keys =
     
     "{ width     | 256   | processing width                          }"
     "{ verbose   | false | verbose mode (w/ display)                 }"
-    
+
     // Tracker file
     "{ regressor |       | face landmark regressor file              }"
     "{ detector  |       | face detector                             }"
@@ -362,10 +365,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::string sOutput = parser.get<std::string>("output");
+    std::string sOutput = parser.get<std::string>("output"); std::cout << sOutput << std::endl;
     if(sOutput.empty())
     {
-        std::cerr << "Msut specify output filename" << std::endl;
+        std::cerr << "Must specify output filename" << std::endl;
         return 1;
     }
 
@@ -448,11 +451,11 @@ int main(int argc, char *argv[])
     InpaintFilter inpaintFilter(int(landmarker->iod() * 0.25 + 0.5f));
     
     // ######### BILATERAL ##############
-    BilateralFilter bilateralFilter(int(landmarker->iod() * 0.125f + 0.5f), 3, 4);
+    BilateralFilter bilateralFilter(int(landmarker->iod() * 0.2f + 0.5f), 5, 10);
     
     cv::Mat filled;
     inpaintFilter(input, filled);
-    drawings.emplace_back( inpaintFilter.getNamedDrawing(filled) );
+//    drawings.emplace_back( inpaintFilter.getNamedDrawing(filled) );
     
     cv::Mat even;
     homomorphicFilter(filled, even);
@@ -460,11 +463,11 @@ int main(int argc, char *argv[])
     
     cv::Mat smooth;
     bilateralFilter(even, smooth);
-    drawings.emplace_back( bilateralFilter.getNamedDrawing(smooth) );
-        
+//    drawings.emplace_back( bilateralFilter.getNamedDrawing(smooth) );
+
     cv::Mat symmetric;
-    landmarker->balance(even, symmetric);
-    drawings.emplace_back("Symmetry", symmetric);
+    landmarker->balance(smooth, symmetric);
+//    drawings.emplace_back("Symmetry", symmetric);
         
     {// Create a face mask
         cv::Mat mask = (symmetric > 0);
@@ -472,6 +475,9 @@ int main(int argc, char *argv[])
         mask = mask.reshape(1, input.rows);
         cv::Mat head = landmarker->segmentHead(even, mask);
         even.setTo(0, ~head);
+
+        symmetric.copyTo(even, mask);
+        drawings.emplace_back("comp", even);
     }
     
     if(!sMapping.empty() && !sModel.empty() && landmarks.size())

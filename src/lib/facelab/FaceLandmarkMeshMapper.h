@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #ifndef FACE_LANDMARK_MESH_MAPPER_H
 #define FACE_LANDMARK_MESH_MAPPER_H 1
 

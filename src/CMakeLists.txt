@@ -1,4 +1,6 @@
-#include <facelab/homomorphic.hpp>
+# Copyright (c) 2015, David Hirvonen
+# All rights reserved.
+
 include_directories(lib)
 
 add_definitions(-DDEST_WITH_OPENCV=1)

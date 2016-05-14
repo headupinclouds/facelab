@@ -1,3 +1,6 @@
+// Copyright (c) 2016, David Hirvonen
+// All rights reserved.
+
 #ifndef FILTER_H
 #define FILTER_H
 

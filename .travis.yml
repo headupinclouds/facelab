@@ -45,20 +45,20 @@ env:
   - TOOLCHAIN=osx-10-9 CONFIG=Release
   - TOOLCHAIN=gcc CONFIG=Debug
   - TOOLCHAIN=gcc CONFIG=Release
-  - TOOLCHAIN=gcc-4-8 CONFIG=Release
-  - TOOLCHAIN=gcc-4-8 CONFIG=Debug
+#  - TOOLCHAIN=gcc-4-8 CONFIG=Release
+#  - TOOLCHAIN=gcc-4-8 CONFIG=Debug
   - TOOLCHAIN=ios-nocodesign CONFIG=Debug EXTRA="--iossim"
   - TOOLCHAIN=ios-nocodesign CONFIG=Release EXTRA="--iossim"
   - TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon CONFIG=Release
   - TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon CONFIG=Debug
 #  - TOOLCHAIN=analyze CONFIG=Release
 #  - TOOLCHAIN=analyze CONFIG=Debug
-  - TOOLCHAIN=sanitize-address CONFIG=Release
-  - TOOLCHAIN=sanitize-address CONFIG=Debug
-  - TOOLCHAIN=sanitize-leak CONFIG=Release
-  - TOOLCHAIN=sanitize-leak CONFIG=Debug
-  - TOOLCHAIN=sanitize-thread CONFIG=Release
-  - TOOLCHAIN=sanitize-thread CONFIG=Debug
+#  - TOOLCHAIN=sanitize-address CONFIG=Release
+#  - TOOLCHAIN=sanitize-address CONFIG=Debug
+#  - TOOLCHAIN=sanitize-leak CONFIG=Release
+#  - TOOLCHAIN=sanitize-leak CONFIG=Debug
+#  - TOOLCHAIN=sanitize-thread CONFIG=Release
+#  - TOOLCHAIN=sanitize-thread CONFIG=Debug
 
 matrix:
   exclude:

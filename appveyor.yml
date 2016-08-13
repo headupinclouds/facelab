@@ -1,5 +1,7 @@
 # Windows (https://github.com/travis-ci-tester/toolchain-table)
 
+os: Previous Visual Studio 2015
+
 environment:
   matrix:
     ###
@@ -50,6 +52,8 @@ install:
   # Use MinGW from Qt tools because version is higher
   # * http://www.appveyor.com/docs/installed-software#qt
   - cmd: set MINGW_PATH=C:\Qt\Tools\mingw492_32\bin
+
+  - git submodule update --init --recursive
 
 build_script:
   - cmd: python %POLLY_SOURCE_DIR%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --verbose --test

@@ -31,6 +31,11 @@ if(is_xcode)
   set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE NO)
 endif()
 
+### Add Sugar packages for cmake wrappers ###
+hunter_add_package(Sugar)
+include("${SUGAR_ROOT}/cmake/Sugar")
+include(sugar_include)
+
 option(FACELAB_USE_EOS "Use EOS" NO)
 if(FACELAB_USE_EOS)
   add_definitions(-DFACELAB_USE_EOS=1)

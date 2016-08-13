@@ -1,28 +1,16 @@
-# Copyright (c) 2015, David Hirvonen
-# All rights reserved.
-
-## #################################################################
-## Executable
-## #################################################################
-
-set(FILTER_SRCS filter.cpp)
-
-if(is_ios)
-  #include(ios.cmake)
-
-  ### Emulate toolchain
+### Emulate toolchain
 set(CMAKE_OSX_SYSROOT "iphoneos")
 set(CMAKE_XCODE_EFFECTIVE_PLATFORMS "-iphoneos;-iphonesimulator")
 set(CMAKE_DEBUG_POSTFIX d)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 ### -- end
 
-include("$ENV{SUGAR_ROOT}/cmake/Sugar")
+#include("$ENV{SUGAR_ROOT}/cmake/Sugar")
 include(sugar_include)
 
 include_directories("${SUGAR_ROOT}/examples/third_party")
 
-#sugar_include("./sources")
+sugar_include("./sources")
 sugar_include("${SUGAR_ROOT}/examples/resources/ios/icons")
 sugar_include("${SUGAR_ROOT}/examples/resources/ios/images")
 
@@ -30,7 +18,7 @@ if(NOT XCODE_VERSION)
   sugar_fatal_error("Xcode only")
 endif()
 
-add_executable(filter ${FILTER_SRCS} ${DEFAULT_IOS_IMAGES} ${IOS_ICONS})
+add_executable(filter ${SOURCES} ${DEFAULT_IOS_IMAGES} ${IOS_ICONS})
 
 set_target_properties(
   filter
@@ -77,11 +65,3 @@ target_link_libraries(
   "-framework Foundation"
   "-framework UIKit"
   )
-
-else()
-  add_executable(filter ${FILTER_SRCS})
-  install(TARGETS filter DESTINATION bin)
-  set_property(TARGET filter PROPERTY FOLDER "apps")
-endif()
-
-target_link_libraries(filter facelab ${OpenCV_LIBS} dest::dest)

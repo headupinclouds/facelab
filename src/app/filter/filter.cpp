@@ -191,7 +191,6 @@ const char *keys =
     "{ triangles-out |   | output triangulation file                 }"
 
     "{ threads   | false | use worker threads when possible          }"
-    "{ verbose   | false | print verbose diagnostics                 }"
     "{ build     | false | print the OpenCV build information        }"
     "{ help      | false | print help message                        }"
 };
@@ -201,14 +200,17 @@ const char *keys =
 
 int main(int argc, char *argv[])
 {
+    const std::string PATTERN = "HOME";
+    std::string home = getenv(PATTERN.c_str());
+
     cv::CommandLineParser parser(argc, argv, keys);
-    
-    if(argc < 2 || parser.has("help"))
+    if(argc < 2 || parser.get<bool>("help"))
     {
+        std::cout << "ARGC: " << argc << std::endl;
         parser.printMessage();
         return 0;
     }
-    else if(parser.has("build"))
+    else if(parser.get<bool>("build"))
     {
         std::cout << cv::getBuildInformation() << std::endl;
         return 0;
@@ -221,21 +223,34 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::string sOutput = parser.get<std::string>("output"); 
+    std::string sOutput = parser.get<std::string>("output");
     if(sOutput.empty())
     {
         std::cerr << "Must specify output filename" << std::endl;
         return 1;
     }
+    
+    std::string sDetector = parser.get<std::string>("detector");
+    std::string sRegressor = parser.get<std::string>("regressor");
+    std::string sTriangles = parser.get<std::string>("triangles");
+    std::vector<std::string*> args { &sInput, &sOutput, &sDetector, &sRegressor, &sTriangles };
+    for(auto &arg : args)
+    {
+        size_t pos = arg->find(PATTERN);
+        if(pos != std::string::npos)
+        {
+            arg->replace(pos, PATTERN.size(), home);
+        }
+    }
 
+    bool verbose =  parser.get<bool>("verbose");
+    
     cv::Mat input = cv::imread(sInput);
     if(input.empty())
     {
         std::cerr << "Unable to read input file " << sInput << std::endl;
         return 1;
     }
-
-    bool verbose =  parser.get<bool>("verbose");
     
     std::vector<std::pair<std::string,cv::Mat>> drawings;
     
@@ -254,9 +269,6 @@ int main(int argc, char *argv[])
 
     // ######### LANDMARK ######################
     std::shared_ptr<FaceLandmarker> landmarker;
-    std::string sDetector = parser.get<std::string>("detector");
-    std::string sRegressor = parser.get<std::string>("regressor");
-    std::string sTriangles = parser.get<std::string>("triangles");
     if(!sRegressor.empty())
     {
         landmarker = std::make_shared<FaceLandmarker>(sRegressor, sDetector);
@@ -341,7 +353,7 @@ int main(int argc, char *argv[])
 #if 1
     cv::Mat shiftedFull;
     cv::pyrMeanShiftFiltering(smoothFull, shiftedFull, 10, 10, 5);
-    cv::imshow("result", shiftedFull); cv::waitKey(0);
+    //cv::imshow("result", shiftedFull); cv::waitKey(0);
     cv::Mat final = shiftedFull;
 #else
     cv::Mat refined, final(smooth.size(), CV_8UC3, cv::Scalar(255,0,0));
@@ -355,14 +367,17 @@ int main(int argc, char *argv[])
     cv::imwrite(sOutput, final);
 
     // Dump the output
-    cv::Mat canvas;
-    std::vector<cv::Mat> images;
-    for(auto &i : drawings)
+    if(0)
     {
-        images.push_back(i.second);
+        cv::Mat canvas;
+        std::vector<cv::Mat> images;
+        for(auto &i : drawings)
+        {
+            images.push_back(i.second);
+        }
+        cv::hconcat(images, canvas);
+        cv::imshow("canvas", canvas); cv::waitKey(0);
     }
-    cv::hconcat(images, canvas);
-    cv::imshow("canvas", canvas); cv::waitKey(0);
  
     return 0;
 }

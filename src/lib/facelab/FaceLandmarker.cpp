@@ -6,8 +6,12 @@
 #include <iostream>
 #include <array>
 
-#define _USE_MATH_DEFINES // for C++
-#include <cmath>
+
+// Not working on VS 14 2015 (Appveyor)
+//#define _USE_MATH_DEFINES // for C++
+//#include <cmath>
+
+#define FL_M_SQRT2 1.41421356237309504880
 
 template <typename T>
 std::vector<std::vector<cv::Point>> pointToContours(const std::vector<cv::Point_<T>> &points)
@@ -393,7 +397,7 @@ std::pair<cv::Mat1b, cv::Rect> FaceLandmarker::segmentHead(const cv::Mat &image,
 {
     cv::Size size = image.size();
     auto face = getFaceEllipse(size);
-    const float scale = M_SQRT2;
+    const float scale = FL_M_SQRT2;
     face.size.width *= scale;
     face.size.height *= scale;
     cv::Rect box = face.boundingRect();
@@ -412,8 +416,8 @@ std::pair<cv::Mat1b, cv::Rect> FaceLandmarker::segmentHead(const cv::Mat &image,
 #endif
     
     cv::Point2f tl = box.tl(), br = box.br();
-    tl = face.center + (tl - face.center) * M_SQRT2;
-    br = face.center + (br - face.center) * M_SQRT2;
+    tl = face.center + (tl - face.center) * FL_M_SQRT2;
+    br = face.center + (br - face.center) * FL_M_SQRT2;
 
 #define DO_HEAD_AND_SHOULDERS 0
 #if DO_HEAD_AND_SHOULDERS

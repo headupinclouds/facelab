@@ -6,6 +6,9 @@
 #include <iostream>
 #include <array>
 
+#define _USE_MATH_DEFINES // for C++
+#include <cmath>
+
 template <typename T>
 std::vector<std::vector<cv::Point>> pointToContours(const std::vector<cv::Point_<T>> &points)
 {

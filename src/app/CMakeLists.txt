@@ -2,8 +2,7 @@
 # All rights reserved.
 
 add_subdirectory(filter)
-add_subdirectory(pose)
 
-if(USE_RETINA)
-  add_subdirectory(retina)
-endif(USE_RETINA)
+if(FACELAB_USE_EOS)
+  add_subdirectory(pose)
+endif()

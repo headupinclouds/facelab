@@ -1,27 +1,24 @@
 # Copyright (c) 2015, David Hirvonen
 # All rights reserved.
 
+if(FACELAB_USE_EOS)
+  # 3D mesh fitter
+  set(EOS_SRCS
+    FaceLandmarkMeshMapper.cpp
+    FaceLandmarkMeshMapper.h
+    )
+endif()
+
 add_library(facelab
+
+  ${EOS_SRCS}
 
   # CPR face landmark interface
   FaceLandmarker.cpp  
   FaceLandmarker.h
 
-  # 3D mesh fitter
-  FaceLandmarkMeshMapper.cpp
-  FaceLandmarkMeshMapper.h
-
   # Filtering API
   Filter.h
-
-  # Diffusion routines from opencv AKAZE
-  nldiffusion_functions.cpp
-  nldiffusion_functions.h
-  fed.h
-  fed.cpp
-
-  DiffusionFilter.h
-  DiffusionFilter.cpp
 
   # homomorphic filter
   homomorphic.cpp
@@ -37,7 +34,11 @@ message("===========================")
 message("===========================")
 message("===========================")
 
-target_link_libraries(facelab ${OpenCV_LIBS} Eigen::eigen cereal::cereal Boost::boost)
+target_link_libraries(facelab ${OpenCV_LIBS} dest::dest)
+
+if(FACELAB_USE_EOS)
+  target_link_libraries(facelab Boost::system Boost::filesystem)
+endif()
 
 ### Install ###
 set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")

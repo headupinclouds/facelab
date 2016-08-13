@@ -10,74 +10,11 @@ environment:
       CONFIG: Debug
 
     ###
-    - TOOLCHAIN: "ninja-vs-12-2013-win64"
-      CONFIG: Release
-
-    - TOOLCHAIN: "ninja-vs-12-2013-win64"
-      CONFIG: Debug
-
-    ###
-    - TOOLCHAIN: "nmake-vs-12-2013-win64"
-      CONFIG: Release
-
-    - TOOLCHAIN: "nmake-vs-12-2013-win64"
-      CONFIG: Debug
-
-    ###
-    - TOOLCHAIN: "nmake-vs-12-2013"
-      CONFIG: Release
-
-    - TOOLCHAIN: "nmake-vs-12-2013"
-      CONFIG: Debug
-
-    ###
-#    - TOOLCHAIN: "vs-10-2010"
-#      CONFIG: Release
-
-#    - TOOLCHAIN: "vs-10-2010"
-#      CONFIG: Debug
-
-    ###
-#    - TOOLCHAIN: "vs-11-2012"
-#      CONFIG: Release
-
-#    - TOOLCHAIN: "vs-11-2012"
-#      CONFIG: Debug
-
-    ###
-    - TOOLCHAIN: "vs-12-2013-win64"
-      CONFIG: Release
-
-    - TOOLCHAIN: "vs-12-2013-win64"
-      CONFIG: Debug
-
-    ###
-    - TOOLCHAIN: "vs-12-2013-xp"
-      CONFIG: Release
-
-    - TOOLCHAIN: "vs-12-2013-xp"
-      CONFIG: Debug
-
-    ###
-    - TOOLCHAIN: "vs-12-2013"
-      CONFIG: Release
-
-    - TOOLCHAIN: "vs-12-2013"
-      CONFIG: Debug
-
-    ###
     - TOOLCHAIN: "vs-14-2015"
       CONFIG: Release
 
     - TOOLCHAIN: "vs-14-2015"
       CONFIG: Debug
-
-    ###
-#    - TOOLCHAIN: "vs-9-2008"
-#      CONFIG: Release
-
-#    - TOOLCHAIN: "vs-9-2008"
-#      CONFIG: Debug
 
     ###
     - TOOLCHAIN: "mingw"
@@ -116,18 +53,3 @@ install:
 
 build_script:
   - cmd: python %POLLY_SOURCE_DIR%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --verbose --test
-
-artifacts:
-  - path: _builds\*\cvsteersdk-*.tar.gz
-    name: Releases
-
-deploy:
-  provider: GitHub
-  auth_token:
-    secure: "U5MPrdwVvE0Xyt7KNsBHp3e03qaBZ5UTV1s7GpTYy4Jxsx6EkKsXuZzBtaDtcU12"
-  artifact: /cvsteersdk-.*\.tar.gz/
-  draft: false
-  prerelease: false
-  on:
-    appveyor_repo_tag: true
-    

@@ -114,7 +114,9 @@ std::vector<cv::Point2f>& FaceLandmarker::operator()(const cv::Mat1b &gray, cons
     if(!m_detector.empty())
     {
         std::vector<cv::Rect> faces;
-        m_detector.detectMultiScale(gray, faces); // TODO: set reasonable upper lower sizes
+        cv::Size mini(gray.cols/2, gray.cols/2);
+        cv::Size maxi(gray.cols, gray.cols);
+        m_detector.detectMultiScale(gray, faces, 1.1, 1, 0, mini, maxi); // TODO: set reasonable upper lower sizes
         crop = faces.front();
     }
     m_roi = crop;
@@ -384,7 +386,7 @@ void FaceLandmarker::balance(const cv::Mat &image, cv::Mat &symmetric)
     }
 }
 
-cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &faceMask)
+std::pair<cv::Mat1b, cv::Rect> FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &faceMask)
 {
     cv::Size size = image.size();
     auto face = getFaceEllipse(size);
@@ -435,6 +437,26 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
         cv::grabCut(image(roi), labels(roi), box, fg, bg, 10, cv::GC_EVAL);
         head = ((labels & 1) > 0);
         
+        std::vector<cv::Vec4i> hierarchy;
+        std::vector<std::vector<cv::Point>> contours;
+        cv::findContours(head, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_L1);
+        
+        std::pair<int, int> best(-1, -1);
+        for(int i = 0; i < contours.size(); i++)
+        {
+            int a = cv::contourArea(contours[i]);
+            if(a > best.second)
+            {
+                best = { i, a };
+            }
+        }
+        
+        std::vector<std::vector<cv::Point>> curve(1);
+        cv::approxPolyDP(contours[best.first], curve[0], std::max(2.0, iod()/32.0) , true);
+        
+        head.setTo(0);
+        cv::drawContours(head, curve, 0, 255, -1, 8);
+        
         if(0)
         { // (((( Display ))))
             cv::Mat canvas = image.clone();
@@ -449,7 +471,7 @@ cv::Mat1b FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &fac
     }
     
     
-    return head;
+    return std::make_pair(head, roi);
 }
 
 // 17-21 : right eye brow

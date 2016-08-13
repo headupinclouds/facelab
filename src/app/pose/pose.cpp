@@ -8,8 +8,6 @@
 #include <sstream>
 #include <numeric>
 
-const char *version = "v0.1";
-
 const char *keys =
 {
     "{ input     |       | input filename                            }"
@@ -29,7 +27,6 @@ const char *keys =
     "{ verbose   | false | print verbose diagnostics                 }"
     "{ build     | false | print the OpenCV build information        }"
     "{ help      | false | print help message                        }"
-    "{ version   | false | print the application version             }"
 };
 
 int main(int argc, char *argv[])
@@ -49,11 +46,6 @@ int main(int argc, char *argv[])
     else if(parser.has("build"))
     {
         std::cout << cv::getBuildInformation() << std::endl;
-        return 0;
-    }
-    else if(parser.has("version"))
-    {
-        std::cout << argv[0] << " v" << version << std::endl;
         return 0;
     }
 
@@ -103,6 +95,13 @@ int main(int argc, char *argv[])
         cv::Mat gray;
         cv::extractChannel(input, gray, 1);
         landmarks = (*landmarker)(gray, {});
+    }
+
+    if(!sOutput.empty())
+    {
+        cv::Mat canvas = input.clone();
+        landmarker->draw(canvas);
+        cv::imwrite(sOutput, canvas);
     }
     
     if(!sMapping.empty() && !sModel.empty() && landmarks.size())

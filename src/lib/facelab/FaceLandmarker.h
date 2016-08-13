@@ -27,7 +27,7 @@ public:
 
     cv::Point2f getMean(const cv::Range &range);
     
-    cv::Mat1b segmentHead(const cv::Mat &image, const cv::Mat1b &mask);
+    std::pair<cv::Mat1b, cv::Rect> segmentHead(const cv::Mat &image, const cv::Mat1b &mask);
     
     void balance(const cv::Mat &image, cv::Mat &symmetric);
     

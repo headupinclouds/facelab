@@ -6,6 +6,6 @@
 ## #################################################################
 
 add_executable(pose pose.cpp)
-target_link_libraries(pose facelab ${OpenCV_LIBS} Eigen::eigen dest Boost::system Boost::filesystem)
+target_link_libraries(pose facelab ${OpenCV_LIBS} dest::dest Boost::system Boost::filesystem)
 install(TARGETS pose DESTINATION bin)
 set_property(TARGET pose PROPERTY FOLDER "apps")

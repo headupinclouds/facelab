@@ -6,7 +6,7 @@
 ## #################################################################
 
 add_executable(filter filter.cpp)
-target_link_libraries(filter facelab llf ${OpenCV_LIBS} Eigen::eigen dest Boost::system Boost::filesystem)
+target_link_libraries(filter facelab ${OpenCV_LIBS} dest::dest)
 install(TARGETS filter DESTINATION bin)
 set_property(TARGET filter PROPERTY FOLDER "apps")
 

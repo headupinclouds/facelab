@@ -3,96 +3,29 @@
 
 #include "facelab/Filter.h"
 #include "facelab/homomorphic.hpp"
-#include "facelab/FaceLandmarkMeshMapper.h"
-#include "facelab/DiffusionFilter.h"
 #include "facelab/FaceLandmarker.h"
-
-#include "local_laplacian.h"
 
 #include <iostream>
 #include <sstream>
 #include <numeric>
 
-#define USE_RETINA 0
-#if USE_RETINA
-#  include <opencv2/bioinspired/bioinspired.hpp>
-#  include <opencv2/features2d.hpp>
-
-// ################ retina ####################
-
-class RetinaFilter
-{
-public:
-    RetinaFilter(const std::string &filename) : m_filename(filename) {}
-    
-    virtual cv::Mat operator()(const cv::Mat &src, cv::Mat &dst)
-    {
-        init(src.size());
-        
-        // reset all retina buffers (imagine you close your eyes for a long time)
-        m_retina->clearBuffers();
-        
-        // declare retina output buffers
-        // processing loop with no stop condition
-        // run retina filter on the loaded input frame
-        m_retina->run(src);
-        
-        // Retrieve and display retina output
-        //cv::Mat retinaOutput_parvo;
-        //myRetina->getParvo(retinaOutput_parvo);
-        
-        cv::Mat retinaOutput_magno;
-        m_retina->getMagno(retinaOutput_magno);
-        
-        cv::Mat hsi, channels[3];
-        cv::cvtColor(src, hsi, cv::COLOR_BGR2HSV_FULL);
-        cv::split(hsi, channels);
-        channels[2] = retinaOutput_magno;
-        cv::merge(channels, 3, hsi);
-        cv::cvtColor(hsi, dst, cv::COLOR_HSV2BGR_FULL);
-        
-        return dst;
-    }
-    
-    void init(const cv::Size &size)
-    {
-        if(m_retina.empty() || m_retina->getInputSize() != size)
-        {
-            m_retina = cv::bioinspired::createRetina(size, m_colorModel, m_colorSamplingMethod, m_useRetinaLogSampling, m_reductionFactor, m_samplingStrength);
-            m_retina->setup(m_filename);
-        }
-     }
-    
-    cv::Mat draw(const cv::Mat &src)
-    {
-        return src;
-    }
-    
-    virtual const char * getFilterName() const { return "RetinaFilter"; }
-    
-    std::string m_filename;
-    cv::Ptr<cv::bioinspired::Retina> m_retina;
-    
-    bool m_colorModel = true;
-    int m_colorSamplingMethod= cv::bioinspired::RETINA_COLOR_BAYER;
-    const bool m_useRetinaLogSampling=false;
-    const float m_reductionFactor=1.0f;
-    const float m_samplingStrength=10.0f;
-};
-#endif // USE_RETINA
+#include <opencv2/photo.hpp>
 
 // ############### homomorphic ###############
 
 class HomomorphicFilter : public Filter
 {
 public:
-    HomomorphicFilter() {}
+    HomomorphicFilter(float cutoff = 0.49, int order = 2, float boost = 4.0)
+    : kCutoff(cutoff)
+    , kOrder(order)
+    , kBoost(boost) {}
     
     virtual cv::Mat operator()(const cv::Mat &src, cv::Mat &dst)
     {
         const float kBeta = (1.0/kBoost);
         const float kAlpha = (1.0 - kBeta);
-        homomorphic(src, dst, kCutoff, kOrder, kAlpha, kBeta, {0.00f, 0.94f});
+        homomorphic(src, dst, kCutoff, kOrder, kAlpha, kBeta, {0.00f, 0.94f}, dst.empty() ? cv::Mat() : dst);
         return dst;
     }
     
@@ -172,48 +105,6 @@ public:
     virtual const char * getFilterName() const { return "SymmetryFilter"; }
 };
 
-// ########## Local laplacian filter ############
-
-class FFLocalLaplacianFilter : public Filter
-{
-public:
-    FFLocalLaplacianFilter(double kAlpha, double kBeta, double kSigmaR, int kLevels)
-    : kAlpha(kAlpha)
-    , kBeta(kBeta)
-    , kSigmaR(kSigmaR)
-    , kLevels(kLevels)
-    {
-    }
-    
-    virtual cv::Mat operator()(const cv::Mat &src, cv::Mat &dest)
-    {
-        cv::Mat scratch;
-        src.convertTo(scratch, CV_64F, 1 / 255.0);
-        switch(scratch.channels())
-        {
-            case 1:
-                scratch = LocalLaplacianFilter<double>(scratch, kAlpha, kBeta, kSigmaR, kLevels);
-                scratch *= 255;
-                scratch.convertTo(dest, CV_8UC1);
-                break;
-            case 3:
-                scratch = LocalLaplacianFilter<cv::Vec3d>(scratch, kAlpha, kBeta, kSigmaR, kLevels);
-                scratch *= 255;
-                scratch.convertTo(dest, CV_8UC3);
-                break;
-            default:
-                std::cerr << "Input image must have 1 or 3 channels." << std::endl;
-                break;
-        }
-        return dest;
-    }
-    
-    double kAlpha, kBeta, kSigmaR;
-    int kLevels;
-    
-    virtual const char * getFilterName() const { return "LocalLaplacianFilter"; }
-};
-
 // ############# Cartoonize ##################
 
 class CartoonizeFilter : public Filter
@@ -262,7 +153,6 @@ public:
             cv::medianBlur(gray, gray, m_medianKernel);
         }
         
-
         cv::Laplacian(gray, edges, CV_8UC1, 5);
         cv::threshold(edges, mask, 0, 255,  cv::THRESH_OTSU  | cv::THRESH_BINARY_INV);
         return mask;
@@ -280,48 +170,18 @@ protected:
     int m_iter = 7;
 };
 
-static cv::Mat drawIsoMesh(FaceLandmarkMeshMapper &mapper, const std::vector<cv::Point2f> &landmarks, cv::Mat &image)
-{
-    cv::Mat iso;
-    eos::render::Mesh mesh;
-    mapper(landmarks, image, mesh, iso);
-    for(auto & p : mesh.texcoords)
-    {
-        p[0] *= iso.cols;
-        p[1] *= iso.rows;
-    }
-    
-    for(int i = 0; i < mesh.tvi.size(); i++)
-    {
-        const auto &t = mesh.tvi[i];
-        cv::Point2f v0 = mesh.texcoords[t[0]];
-        cv::Point2f v1 = mesh.texcoords[t[1]];
-        cv::Point2f v2 = mesh.texcoords[t[2]];
-        cv::line(iso, v0, v1, {0,255,0}, 1, 8);
-        cv::line(iso, v1, v2, {0,255,0}, 1, 8);
-        cv::line(iso, v2, v0, {0,255,0}, 1, 8);
-    }
-    return iso;
-}
-
-
-const char *version = "v0.1";
 
 const char *keys =
 {
     "{ input     |       | input filename                            }"
     "{ output    |       | output filename                           }"
     
-    "{ width     | 256   | processing width                          }"
+    "{ width     | 512   | processing width                          }"
     "{ verbose   | false | verbose mode (w/ display)                 }"
 
     // Tracker file
     "{ regressor |       | face landmark regressor file              }"
     "{ detector  |       | face detector                             }"
-
-#if USE_RETINA    
-    "{ retina    |       | retina parameters                         }"
-#endif
 
     "{ model     |       | model file                                }"
     "{ mapping   |       | mapping file                              }"
@@ -329,19 +189,15 @@ const char *keys =
     // Triangulation
     "{ triangles |       | input precomputed triangulation           }"
     "{ triangles-out |   | output triangulation file                 }"
-    
-    // Local Laplacian Filtering:
-    "{ levels    |   3   | number of pyramid levels                  }"
-    "{ sigma     |  0.3  | threshold distinguishing details from edges. Smaller values limit the manipulation to smaller-amplitude variations }"
-    "{ alpha     |  2.0  | controls how details are modified: 0<a<1 amplifies detail, while a>1 attenuates it.     }"
-    "{ beta      |  1.0  | intensity range: beta > 1.0 performs expansion, while beta < 1.0 performs compression.  }"
 
     "{ threads   | false | use worker threads when possible          }"
     "{ verbose   | false | print verbose diagnostics                 }"
     "{ build     | false | print the OpenCV build information        }"
     "{ help      | false | print help message                        }"
-    "{ version   | false | print the application version             }"
 };
+
+#define SHOW_HISTORY 0
+#define DO_INPAINT 0
 
 int main(int argc, char *argv[])
 {
@@ -355,11 +211,6 @@ int main(int argc, char *argv[])
     else if(parser.has("build"))
     {
         std::cout << cv::getBuildInformation() << std::endl;
-        return 0;
-    }
-    else if(parser.has("version"))
-    {
-        std::cout << argv[0] << " v" << version << std::endl;
         return 0;
     }
 
@@ -394,35 +245,13 @@ int main(int argc, char *argv[])
     int medianKernel = 7;
     CartoonizeFilter cartoonizeFilter(sigmaSpace, sigmaColor, iter, medianKernel);
 
-#if USE_RETINA
-    // ############ RETINA ###############
-    std::string sRetina = parser.get<std::string>("retina");
-    if(sRetina.empty())
-    {
-        std::cerr << "Unable to read the input file " << sRetina << std::endl;
-        return 1;
-    }
-    RetinaFilter retinaFilter(sRetina);
-#endif
-    
     int width = parser.get<int>("width");
+    cv::Size size = input.size();
     cv::resize(input, input, {width, input.rows * width/input.cols}, cv::INTER_CUBIC);
     
-    // ########## FACE MESH LANDMARKER #########
-    std::string sModel = parser.get<std::string>("model");
-    std::string sMapping = parser.get<std::string>("mapping");
-    FaceLandmarkMeshMapper mapper(sModel, sMapping);
-    
     // ######### Homomorhpic filter ############
-    HomomorphicFilter homomorphicFilter;
-    
-    // ######### LOCAL LAPLACIAN ###############
-    const double kSigmaR = parser.get<double>("sigma"); // 0.3
-    const double kAlpha = parser.get<double>("alpha");  // 2.0
-    const double kBeta = parser.get<double>("beta");    // 1.0
-    const int kLevels = parser.get<int>("levels");      // 3
-    FFLocalLaplacianFilter localLaplacianFilter(kAlpha, kBeta, kSigmaR, kLevels);
-    
+    HomomorphicFilter homomorphicFilter(0.4, 2, 2.0);
+
     // ######### LANDMARK ######################
     std::shared_ptr<FaceLandmarker> landmarker;
     std::string sDetector = parser.get<std::string>("detector");
@@ -461,42 +290,71 @@ int main(int argc, char *argv[])
     InpaintFilter inpaintFilter(int(landmarker->iod() * 0.25 + 0.5f));
     
     // ######### BILATERAL ##############
-    BilateralFilter bilateralFilter(int(landmarker->iod() * 0.2f + 0.5f), 5, 10);
+    BilateralFilter bilateralFilter(int(landmarker->iod() * 0.1 + 0.5f), 5, 10);
     
     cv::Mat filled;
+#if DO_INPAINT
     inpaintFilter(input, filled);
-//    drawings.emplace_back( inpaintFilter.getNamedDrawing(filled) );
+#else // else(DO_INPAINT)
+    filled = input.clone();
+#if SHOW_HISTORY
+    drawings.emplace_back( inpaintFilter.getNamedDrawing(filled) );
+#endif // endif(SHOW_HISTORY)
+#endif // endif(DO_INPAINT)
     
     cv::Mat even;
     homomorphicFilter(filled, even);
     drawings.emplace_back( homomorphicFilter.getNamedDrawing(even) );
     
-    cv::Mat smooth;
-    bilateralFilter(even, smooth);
-//    drawings.emplace_back( bilateralFilter.getNamedDrawing(smooth) );
-
-    cv::Mat symmetric;
-    landmarker->balance(smooth, symmetric);
-//    drawings.emplace_back("Symmetry", symmetric);
-        
-    {// Create a face mask
-        cv::Mat mask = (symmetric > 0);
-        cv::reduce( mask.reshape(1, mask.total()), mask, 1, cv::REDUCE_MAX);
-        mask = mask.reshape(1, input.rows);
-        cv::Mat head = landmarker->segmentHead(even, mask);
-        smooth.setTo(0, ~head);
-
-        symmetric.copyTo(smooth, mask);
-        drawings.emplace_back("comp", smooth);
-    }
+    cv::Mat smoothFull;
+    bilateralFilter(even, smoothFull);
     
-    if(!sMapping.empty() && !sModel.empty() && landmarks.size() && verbose)
-    {
-        cv::Mat iso = drawIsoMesh(mapper, landmarks, input);
-        cv::imshow("iso", iso);
-    }
+    cv::Mat symmetric;
+    landmarker->balance(smoothFull, symmetric);
+#if SHOW_HISTORY
+    drawings.emplace_back("Symmetry", symmetric);
+#endif
+    
+    cv::Mat smooth;
+    bilateralFilter(symmetric, smooth);
+#if SHOW_HISTORY
+    drawings.emplace_back( bilateralFilter.getNamedDrawing(smooth) );
+#endif
+    
+    // Create a face mask
+    cv::Mat mask = (symmetric > 0);
+    cv::reduce( mask.reshape(1, mask.total()), mask, 1, cv::REDUCE_MAX);
+    mask = mask.reshape(1, input.rows);
 
-    // Dump the output 
+    auto info = landmarker->segmentHead(even, mask);
+    auto head = info.first;
+    cv::Rect roi = info.second;
+
+    // Paste face into head:
+    smoothFull.setTo(cv::Scalar(0,0,0), ~head);
+    symmetric.copyTo(smoothFull, mask);
+    cv::medianBlur(smoothFull, smoothFull, 3);
+    drawings.emplace_back("comp", smooth);
+    
+    smoothFull.setTo(cv::Scalar(255,0,0), ~head);
+    
+#if 1
+    cv::Mat shiftedFull;
+    cv::pyrMeanShiftFiltering(smoothFull, shiftedFull, 10, 10, 5);
+    cv::imshow("result", shiftedFull); cv::waitKey(0);
+    cv::Mat final = shiftedFull;
+#else
+    cv::Mat refined, final(smooth.size(), CV_8UC3, cv::Scalar(255,0,0));
+    localLaplacianFilter(shiftedFull(roi), refined);
+    fined.copyTo(final(roi));
+#endif
+    
+    drawings.emplace_back("final", final.clone());
+    
+    cv::resize(final, final, size, 0, 0, cv::INTER_LANCZOS4);
+    cv::imwrite(sOutput, final);
+
+    // Dump the output
     cv::Mat canvas;
     std::vector<cv::Mat> images;
     for(auto &i : drawings)
@@ -504,7 +362,7 @@ int main(int argc, char *argv[])
         images.push_back(i.second);
     }
     cv::hconcat(images, canvas);
-    cv::imwrite(sOutput, canvas);
+    cv::imshow("canvas", canvas); cv::waitKey(0);
  
     return 0;
 }

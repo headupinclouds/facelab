@@ -6,7 +6,8 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . ${DIR}/download-assets.sh
 
-PATH="${DIR}/../_install/libcxx/bin:${PATH}"
+TOOLCHAIN=xcode
+PATH="${DIR}/../_install/${TOOLCHAIN}/bin:${PATH}"
 
 FACE_IMAGE=${HOME}/Downloads/face.jpg
 if [ $# -ge 1 ] && [ -f ${1} ]; then
@@ -24,6 +25,7 @@ ARGUMENTS=(\
     "--width=512 "
     "--regressor=${ASSETDIR}/dest_tracker_VJ_ibug.bin "
     "--detector=${ASSETDIR}/haarcascade_frontalface_alt.xml "
+    "--log=log.txt "
 )
 
 eval filter "${ARGUMENTS[*]}"

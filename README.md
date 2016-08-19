@@ -33,6 +33,10 @@ build.py --toolchain libcxx --install --reconfig --verbose
 
 # Test face filter:
 ```
-./bin/cartoon.sh /my/path/to/some/face/image.jpg
+./bin/filter.sh /my/path/to/some/face/image.jpg
 open /tmp/cartoon.jpg
 ```
+
+# Sample build commands
+polly.py --toolchain ios-9-2 --verbose --install --reconfig --config Release
+polly.py --toolchain libcxx --verbose --install --reconfig --config Release

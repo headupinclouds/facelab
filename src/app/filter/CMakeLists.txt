@@ -80,8 +80,8 @@ target_link_libraries(
 
 else()
   add_executable(filter ${FILTER_SRCS})
-  install(TARGETS filter DESTINATION bin)
-  set_property(TARGET filter PROPERTY FOLDER "apps")
 endif()
 
 target_link_libraries(filter facelab ${OpenCV_LIBS} dest::dest)
+set_property(TARGET filter PROPERTY FOLDER "apps")
+install(TARGETS filter DESTINATION bin)

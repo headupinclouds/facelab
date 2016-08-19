@@ -116,14 +116,15 @@ std::vector<cv::Point2f> FaceLandmarker::fitLandmarks(const cv::Mat &gray)
     
 std::vector<cv::Point2f>& FaceLandmarker::operator()(const cv::Mat1b &gray, const cv::Rect &roi)
 {
-    // =========
     cv::Rect crop = roi;
     if(!m_detector.empty())
     {
         std::vector<cv::Rect> faces;
-        cv::Size mini(gray.cols/2, gray.cols/2);
-        cv::Size maxi(gray.cols, gray.cols);
-        m_detector.detectMultiScale(gray, faces, 1.1, 1, 0, mini, maxi); // TODO: set reasonable upper lower sizes
+        cv::Size mini(gray.cols*1/3, gray.cols*1/3);
+        cv::Size maxi(gray.cols*3/4, gray.cols*3/4);
+        m_detector.detectMultiScale(gray, faces, 1.1, 1, 0, mini, maxi);
+
+        std::sort(faces.begin(), faces.end(), [](const cv::Rect &a, const cv::Rect &b) { return a.area() < b.area(); });
         crop = faces.front();
     }
     m_roi = crop;
@@ -396,8 +397,11 @@ void FaceLandmarker::balance(const cv::Mat &image, cv::Mat &symmetric)
 std::pair<cv::Mat1b, cv::Rect> FaceLandmarker::segmentHead(const cv::Mat &image, const cv::Mat1b &faceMask)
 {
     cv::Size size = image.size();
-    auto face = getFaceEllipse(size);
-    const float scale = FL_M_SQRT2;
+    auto face1 = getFaceEllipse(size);
+    face1.size.width *= 0.9f;
+
+    auto face = face1;
+    const float scale = 1.25f; // FL_M_SQRT2;
     face.size.width *= scale;
     face.size.height *= scale;
     cv::Rect box = face.boundingRect();
@@ -432,22 +436,55 @@ std::pair<cv::Mat1b, cv::Rect> FaceLandmarker::segmentHead(const cv::Mat &image,
     
     { // Segment the head:
         
+        // Make sure convex hull of original face mask is probably foreground
+        std::vector< std::vector< cv::Point> > contours;
+        std::vector<cv::Vec4i> hierarchy;
+        
+#if 0
+        cv::findContours(faceMask, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+        cv::Mat1b faceMaskHull = cv::Mat1b::zeros(faceMask.size());
+        std::vector<cv::Point> points;
+        for(const auto &c : contours)
+        {
+            std::copy(c.begin(), c.end(), std::back_inserter(points));
+        }
+        std::vector<std::vector<cv::Point>> hull(1);
+        cv::convexHull(points, hull[0]);
+        cv::fillPoly(faceMaskHull, hull, 255);
+#else
+        cv::Mat1b faceMaskHull;
+        cv::dilate(faceMask, faceMaskHull, {}, {-1,-1}, 5);
+#endif
+        
         cv::Mat1b faceMaskSmall;
         cv::erode(faceMask, faceMaskSmall, {}, {-1,-1}, 8);
         
         cv::Mat1b labels(size, cv::GC_BGD);
 
         cv::rectangle(labels, box, cv::GC_PR_FGD, -1);
+        labels.setTo(cv::GC_PR_FGD, faceMaskHull);
         labels.setTo(cv::GC_FGD, faceMaskSmall);
+        
+        
+        cv::Point2f p27 = m_landmarks[27];
+        cv::Point2f p8 = m_landmarks[8];
+        cv::Point2f v = p27 - p8;
+        cv::Point2f vn = cv::normalize(cv::Vec2f(v));
+        cv::line(labels, p27, p8 - (v * 2.0f), cv::GC_FGD, 64, -1);
+        
+        cv::ellipse(labels, face1, cv::GC_FGD, -1, 4);
+        
+        //cv::imshow("faceMaskSmall", faceMaskSmall);
+        
+        m_labels = labels.clone();
 
         cv::Mat fg, bg;
-        cv::grabCut(image(roi), labels(roi), box, fg, bg, 10, cv::GC_EVAL);
+        cv::grabCut(image(roi), labels(roi), box, fg, bg, 2, cv::GC_EVAL);
         head = ((labels & 1) > 0);
         
-        std::vector<cv::Vec4i> hierarchy;
-        std::vector<std::vector<cv::Point>> contours;
-        cv::findContours(head, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_L1);
-        
+        // Approximate segmented contour
+        cv::findContours(head, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
         std::pair<int, int> best(-1, -1);
         for(int i = 0; i < contours.size(); i++)
         {

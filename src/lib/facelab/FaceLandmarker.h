@@ -48,13 +48,20 @@ public:
     void draw(cv::Mat &canvas, const cv::Point2f &tl = {});
     int writeTriangulation(const std::string &filename) const;
     int readTriangulation(const std::string &filename);
+    
+    const cv::Rect & getRoi() const { return m_roi; }
 
+    // DEBUG:
+    const cv::Mat1b &getLabels() const { return m_labels; }
     cv::Mat canvas;
     
 protected:
     
     void delaunay(const cv::Size &size);
     void mirrorTriangulation(const std::vector<cv::Point2f> &landmarks, const std::vector<std::array<int,2>> &mirrorMap);
+    
+    
+    cv::Mat1b m_labels;
     
     cv::Rect m_roi;
     

@@ -8,6 +8,26 @@
 #include <iostream>
 #include <sstream>
 #include <numeric>
+#include <fstream>
+
+class ScopeTimer
+{
+public:
+    ScopeTimer(const std::string &name, std::ostream &os) : m_name(name), m_os(os)
+    {
+        m_tic = cv::getTickCount();
+    }
+    ~ScopeTimer()
+    {
+        int64 toc = cv::getTickCount();
+        double elapsed = double(toc - m_tic)/double(cv::getTickFrequency());
+        m_os << m_name << " " << elapsed << std::endl;
+    }
+protected:
+    int64 m_tic;
+    std::string m_name;
+    std::ostream &m_os;
+};
 
 #include <opencv2/photo.hpp>
 
@@ -174,7 +194,10 @@ protected:
 const char *keys =
 {
     "{ input     |       | input filename                            }"
+    "{ hair-mask |       | input mask file                           }"
     "{ output    |       | output filename                           }"
+    
+    "{ log       |       | log file                                  }"
     
     "{ width     | 512   | processing width                          }"
     "{ verbose   | false | verbose mode (w/ display)                 }"
@@ -222,18 +245,29 @@ int main(int argc, char *argv[])
         std::cerr << "Must specify input filename" << std::endl;
         return 1;
     }
-
+    
     std::string sOutput = parser.get<std::string>("output");
     if(sOutput.empty())
     {
         std::cerr << "Must specify output filename" << std::endl;
         return 1;
     }
-    
+
+    std::string sHairMask = parser.get<std::string>("hair-mask");
+    std::string sLog = parser.get<std::string>("log");
     std::string sDetector = parser.get<std::string>("detector");
     std::string sRegressor = parser.get<std::string>("regressor");
     std::string sTriangles = parser.get<std::string>("triangles");
-    std::vector<std::string*> args { &sInput, &sOutput, &sDetector, &sRegressor, &sTriangles };
+    std::vector<std::string*> args
+    {
+        &sInput,
+        &sOutput,
+        &sDetector,
+        &sRegressor,
+        &sTriangles,
+        &sLog,
+        &sHairMask
+    };
     for(auto &arg : args)
     {
         size_t pos = arg->find(PATTERN);
@@ -243,31 +277,60 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Create log stream:
+    std::ostream *os;
+    std::ofstream log;
+    if(!sLog.empty())
+    {
+        log.open(sLog);
+        os = &log;
+    }
+    else
+    {
+        os = &std::cout;
+    }        
+
     bool verbose =  parser.get<bool>("verbose");
     
-    cv::Mat input = cv::imread(sInput);
+    cv::Mat input = cv::imread(sInput, cv::IMREAD_COLOR);
     if(input.empty())
     {
         std::cerr << "Unable to read input file " << sInput << std::endl;
         return 1;
     }
     
-    std::vector<std::pair<std::string,cv::Mat>> drawings;
+    cv::Mat hairMask = cv::imread(sHairMask, cv::IMREAD_GRAYSCALE);
+    if(hairMask.empty())
+    {
+        hairMask = cv::Mat1b::zeros(input.size()); // create empty hair mask
+    }
+    CV_Assert(hairMask.size() == input.size());
     
+    std::vector<std::pair<std::string,cv::Mat>> drawings;
+
     float sigmaSpace = 7;
     float sigmaColor = 7;
     int iter = 7;
     int medianKernel = 7;
     CartoonizeFilter cartoonizeFilter(sigmaSpace, sigmaColor, iter, medianKernel);
-
+    
+    *os << sInput << ": " << input.size() << std::endl;
+    
     int width = parser.get<int>("width");
     cv::Size size = input.size();
     cv::resize(input, input, {width, input.rows * width/input.cols}, cv::INTER_CUBIC);
+    cv::resize(hairMask, hairMask, {width, input.rows * width/input.cols}, cv::INTER_NEAREST);
+    hairMask = hairMask > 0;
+
+    //cv:: q("hairMask", hairMask);
+    
+    *os << sInput << ": " << input.size() << std::endl;
     
     // ######### Homomorhpic filter ############
     HomomorphicFilter homomorphicFilter(0.4, 2, 2.0);
 
     // ######### LANDMARK ######################
+    *os << "Create landmarker:" << sRegressor << "," << sDetector << std::endl;
     std::shared_ptr<FaceLandmarker> landmarker;
     if(!sRegressor.empty())
     {
@@ -278,13 +341,20 @@ int main(int argc, char *argv[])
             landmarker->readTriangulation(sTriangles);
         }
     }
-    
+
+    *os << "Do landmarks" << std::endl;
     std::vector<cv::Point2f> landmarks;
     if(landmarker)
     {
         cv::Mat gray;
         cv::extractChannel(input, gray, 1);
-        landmarks = (*landmarker)(gray, {});
+
+        { // FaceLandmarker:
+            ScopeTimer timer("FaceLandmarker+Detection", *os);
+            landmarks = (*landmarker)(gray, {});
+            
+            *os << landmarker->getRoi() << " " << double(landmarker->getRoi().area())/double(gray.size().area()) << std::endl;
+        }
         
         std::string sTrianglesOut = parser.get<std::string>("triangles-out");
         if(!sTrianglesOut.empty())
@@ -305,69 +375,96 @@ int main(int argc, char *argv[])
     BilateralFilter bilateralFilter(int(landmarker->iod() * 0.1 + 0.5f), 5, 10);
     
     cv::Mat filled;
+
 #if DO_INPAINT
-    inpaintFilter(input, filled);
-#else // else(DO_INPAINT)
-    filled = input.clone();
+    *os << "Do inpaint" << std::endl;    
+    {
+        ScopeTimer timer("InpaintFilter", *os);
+        inpaintFilter(input, filled);
+    }
 #if SHOW_HISTORY
     drawings.emplace_back( inpaintFilter.getNamedDrawing(filled) );
 #endif // endif(SHOW_HISTORY)
+    
+#else // else(DO_INPAINT)
+    filled = input.clone();
 #endif // endif(DO_INPAINT)
     
     cv::Mat even;
-    homomorphicFilter(filled, even);
+    {
+        *os << "Do homomorphic" << std::endl;            
+        ScopeTimer timer("HomomorphicFilter", *os);
+        homomorphicFilter(filled, even);
+    }
     drawings.emplace_back( homomorphicFilter.getNamedDrawing(even) );
     
     cv::Mat smoothFull;
-    bilateralFilter(even, smoothFull);
+    {
+        ScopeTimer timer("BilateralFilter", *os);
+        bilateralFilter(even, smoothFull);
+    }
     
     cv::Mat symmetric;
-    landmarker->balance(smoothFull, symmetric);
+    {
+        ScopeTimer timer("SymmetryFilter", *os);
+        landmarker->balance(smoothFull, symmetric);
+    }
 #if SHOW_HISTORY
     drawings.emplace_back("Symmetry", symmetric);
 #endif
     
     cv::Mat smooth;
-    bilateralFilter(symmetric, smooth);
+    {
+        ScopeTimer timer("BilateralFilter", *os);
+        bilateralFilter(symmetric, smooth);
+    }
 #if SHOW_HISTORY
     drawings.emplace_back( bilateralFilter.getNamedDrawing(smooth) );
 #endif
     
     // Create a face mask
-    cv::Mat mask = (symmetric > 0);
-    cv::reduce( mask.reshape(1, mask.total()), mask, 1, cv::REDUCE_MAX);
-    mask = mask.reshape(1, input.rows);
+    cv::Mat faceMask = (symmetric > 0);
+    cv::reduce( faceMask.reshape(1, faceMask.total()), faceMask, 1, cv::REDUCE_MAX);
+    faceMask = faceMask.reshape(1, input.rows);
 
-    auto info = landmarker->segmentHead(even, mask);
-    auto head = info.first;
-    cv::Rect roi = info.second;
+    CV_Assert(hairMask.size() == faceMask.size());
+    cv::Mat mask = (faceMask | hairMask);
+    
+    //cv::imshow("both-masks", mask);
+    
+    //cv::imshow("even", even);
+    //cv::imshow("mask", mask);
+    //cv::imshow("mask", mask); cv::waitKey(0);
 
-    // Paste face into head:
-    smoothFull.setTo(cv::Scalar(0,0,0), ~head);
-    symmetric.copyTo(smoothFull, mask);
-    cv::medianBlur(smoothFull, smoothFull, 3);
-    drawings.emplace_back("comp", smooth);
+    { // Head segmentation:
+        ScopeTimer timer("Grabcut", *os);
+        auto info = landmarker->segmentHead(even, mask);
+        auto head = info.first;
+        
+        cv::Mat labels = landmarker->getLabels() * 255/3;
+        cv::cvtColor(labels, labels, cv::COLOR_GRAY2BGR);
+        drawings.emplace_back("labels", labels);
+
+        //cv::medianBlur(smoothFull, smoothFull, 3);
+        smoothFull.setTo(cv::Scalar(255,0,0), ~head);
+        
+        // Paste symmetric face back into head:
+        symmetric.copyTo(smoothFull, faceMask);
+        drawings.emplace_back("comp", smoothFull);
+    }
     
-    smoothFull.setTo(cv::Scalar(255,0,0), ~head);
+    //cv::Mat shiftedFull;
+    //cv::pyrMeanShiftFiltering(smoothFull, shiftedFull, 10, 10, 5);
+    //cv::Mat final = shiftedFull;
+    //drawings.emplace_back("final", final.clone());
     
-#if 1
-    cv::Mat shiftedFull;
-    cv::pyrMeanShiftFiltering(smoothFull, shiftedFull, 10, 10, 5);
-    //cv::imshow("result", shiftedFull); cv::waitKey(0);
-    cv::Mat final = shiftedFull;
-#else
-    cv::Mat refined, final(smooth.size(), CV_8UC3, cv::Scalar(255,0,0));
-    localLaplacianFilter(shiftedFull(roi), refined);
-    fined.copyTo(final(roi));
-#endif
-    
-    drawings.emplace_back("final", final.clone());
+    cv::Mat final = smoothFull.clone();
     
     cv::resize(final, final, size, 0, 0, cv::INTER_LANCZOS4);
     cv::imwrite(sOutput, final);
 
     // Dump the output
-    if(0)
+    if(verbose)
     {
         cv::Mat canvas;
         std::vector<cv::Mat> images;
